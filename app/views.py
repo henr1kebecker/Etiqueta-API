@@ -131,11 +131,18 @@ class ListaProdutos(generics.ListAPIView):
     def get_queryset(self):
         queryset = Produto.objects.all()
         buscar = self.request.query_params.get('nome', None)
+        id = self.request.query_params.get('id', None)
 
         if buscar:
             queryset = queryset.filter(nome__icontains=buscar).order_by('nome')
             # data = self.serializer_class(lista, many=True)
             return queryset
+        if id:
+            id = int(id)
+            queryset = queryset.filter(id=id)
+            # data = self.serializer_class(lista, many=True)
+            return queryset
+
     
         return queryset.order_by('nome')
 
