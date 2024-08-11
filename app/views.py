@@ -6,56 +6,39 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.http import JsonResponse
 from rest_framework import status
-from .serializers import (LoginSerializer, UsuarioData, MarcaSerializer, 
+from .serializers import (LoginSerializer, MarcaSerializer, 
                           ProdutoSerializer, MarcaListaSerializer, ProdutoListaSerializer)
 from rest_framework.views import APIView
 from django.views.decorators.csrf import get_token
-from rest_framework.decorators import api_view,permission_classes
-from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError
-
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 
 def getToken(request):
     token = get_token(request)
+
     
     return JsonResponse({'token': token})
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def verificar_token(request):
-    token = request.data.get('toke')
+def checkToken(request):
+    token = request.headers.get('Authorization')
 
-    if not token:
-        return Response({'detail': 'Token não fornecido'}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        toke = AccessToken(token)
-        return Response({'token': True}, status=status.HTTP_200_OK)
+    if token is not None:
+        try:
+            token_key = token.split(' ')[1]
+        except IndexError:
+            return Response({'error': 'Token Invalido!'} ,status=status.HTTP_400_BAD_REQUEST)
 
-    except TokenError as e:
-        if isinstance(e, TokenError) and e.args[0] == 'Token is invalid or expired':
-            print(e.args)
-            return Response({'token': False}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            print('falso')
-            print('Erro: ', e.args[0])
-            return Response({'token': False}, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def refresh_token(request):
-    act = request.data.get('refresh')
-    print(act)
-    if not act:
-        return Response({'detail': 'Token de atualização não fornecido'}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        refresh_tk = RefreshToken(act)
-        new_refresh = refresh_tk.access_token
-        return Response({'acess':str(new_refresh)}, status=status.HTTP_200_OK)
-    except TokenError as e:
-        return Response({'detail':'Tokend de atualização inválido ou expirado!'}, status=status.HTTP_400_BAD_REQUEST)
-
+        try:
+            tk = Token.objects.get(key=token_key)
+            return Response({'acesso': True, 'token': 'Válido'})
+        except Token.DoesNotExist:
+            return Response({'acesso': False, 'error': 'Token inválido!'})
+        
 
 class UserViewSet(viewsets.ModelViewSet):
 
@@ -72,17 +55,35 @@ class RegistrarUser(generics.CreateAPIView):
 
 class LoginToken(APIView):
     serializer_class = LoginSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        codigo = request.data.get('codigo')
+        pwd = request.data.get('password')
+        
+        user = authenticate(codigo=codigo, password=pwd)
+        data = { 'nome': user.nome, 'setor': user.setor }
+
+        if user is not None:
+            token, criar = Token.objects.get_or_create(user=user)
+            return Response({'acesso':True, 'token': token.key, 'usuario': data})
+        else:
+            return Response({'acesso':False, 'erro': 'Codigo e/ou senha inválidos' })
+
+
+
+class Logout(APIView):
+    authentication_classes = (TokenAuthentication,)
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        user = self.request.user
-        dt = user.data()
-        print(dt)
-        return Response({'acesso':True, 'user': dt})
-        
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        tk = Token.objects.get(user=user)
+        tk.delete()
+        return Response({'msg': 'Token deletado!'})
 
 class JustificarPonto(generics.CreateAPIView):
-    authentication_classes= ()
+    authentication_classes = (TokenAuthentication,)
     serializer_class = PontoSerializer
     permission_classes = [IsAuthenticated]
 
@@ -91,14 +92,14 @@ class CriarMarca(generics.CreateAPIView):
     queryset = Marca.objects.all()
     serializer_class = MarcaSerializer
     permission_classes = [IsAuthenticated]
+    authentication_classes = (TokenAuthentication,)
 
 
 class ListaMarca(generics.ListAPIView):
-    
+    authentication_classes = (TokenAuthentication,)
     serializer_class = MarcaListaSerializer
     permission_classes = [IsAuthenticated]
 
-    
     def get_queryset(self):
         queryset = Marca.objects.all()
         buscar = self.request.query_params.get('nome', None)
@@ -113,6 +114,7 @@ class ListaMarca(generics.ListAPIView):
 
 class EditarMarca(generics.UpdateAPIView):
     queryset = Marca.objects.all()
+    authentication_classes = (TokenAuthentication,)
     serializer_class = MarcaSerializer
     permission_classes = [IsAuthenticated]
 
@@ -121,10 +123,12 @@ class CriarProduto(generics.CreateAPIView):
     queryset = Produto.objects.all()
     serializer_class = ProdutoSerializer
     permission_classes = [IsAuthenticated]
+    authentication_classes = (TokenAuthentication,)
 
 
 class ListaProdutos(generics.ListAPIView):
-    
+
+    authentication_classes = (TokenAuthentication,)
     serializer_class = ProdutoListaSerializer
     permission_classes = [IsAuthenticated]
 
@@ -148,6 +152,8 @@ class ListaProdutos(generics.ListAPIView):
 
 
 class UpdateProdutos(generics.UpdateAPIView):
+
+    authentication_classes = (TokenAuthentication,)
     queryset = Produto.objects.all()
     serializer_class = ProdutoSerializer
     permission_classes = [IsAuthenticated]

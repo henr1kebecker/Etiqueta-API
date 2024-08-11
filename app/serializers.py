@@ -107,6 +107,7 @@ class ProdutoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Produto
         fields = ['id','nome', 'marca']
+        
     def create(self, validated_data):
         marcadt = validated_data['marca']['marca']
         userdt = self.context['request'].user
