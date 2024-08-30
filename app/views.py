@@ -1,4 +1,4 @@
-from .models import Usuario, Produto, Marca
+from .models import Usuario, Produto, Marca, CNPJ
 from .serializers import UserSerializer, PontoSerializer
 from rest_framework import permissions, viewsets
 from rest_framework import generics
@@ -7,13 +7,18 @@ from rest_framework.response import Response
 from django.http import JsonResponse
 from rest_framework import status
 from .serializers import (LoginSerializer, MarcaSerializer, 
-                          ProdutoSerializer, MarcaListaSerializer, ProdutoListaSerializer)
+                          ProdutoSerializer, MarcaListaSerializer, ProdutoListaSerializer, 
+                          CNPJSerializer
+                          )
 from rest_framework.views import APIView
 from django.views.decorators.csrf import get_token
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
+import re
+from unidecode import unidecode
+
 
 def getToken(request):
     token = get_token(request)
@@ -103,9 +108,14 @@ class ListaMarca(generics.ListAPIView):
     def get_queryset(self):
         queryset = Marca.objects.all()
         buscar = self.request.query_params.get('nome', None)
+        buscar_id = self.request.query_params.get('id', None)
 
         if buscar:
             queryset = queryset.filter(marca__icontains=buscar).order_by('marca')
+            # data = self.serializer_class(lista, many=True)
+            return queryset
+        elif buscar_id:
+            queryset = queryset.filter(id=buscar_id).order_by('marca')
             # data = self.serializer_class(lista, many=True)
             return queryset
     
@@ -138,7 +148,9 @@ class ListaProdutos(generics.ListAPIView):
         id = self.request.query_params.get('id', None)
 
         if buscar:
-            queryset = queryset.filter(nome__icontains=buscar).order_by('nome')
+            print(unidecode(buscar))
+
+            queryset = queryset.filter(nome__icontains=unidecode(buscar)).order_by('nome')
             # data = self.serializer_class(lista, many=True)
             return queryset
         if id:
@@ -157,3 +169,10 @@ class UpdateProdutos(generics.UpdateAPIView):
     queryset = Produto.objects.all()
     serializer_class = ProdutoSerializer
     permission_classes = [IsAuthenticated]
+
+
+class PessoaJuridica(generics.CreateAPIView):
+    queryset = CNPJ.objects.all()
+    serializer_class = CNPJSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = (TokenAuthentication,)

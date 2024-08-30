@@ -3,7 +3,8 @@ from rest_framework import serializers
 from rest_framework import status
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import authenticate, login
-from .models import Usuario, Marca, Produto
+from .models import Usuario, Marca, Produto, CNPJ
+from unidecode import unidecode
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -77,7 +78,7 @@ class MarcaSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         userdt = self.context['request'].user
         marca = Marca(
-            marca = str(validated_data['marca']).upper(),
+            marca = unidecode(str(validated_data['marca']).upper()),
             user = userdt
         )
         
@@ -85,7 +86,7 @@ class MarcaSerializer(serializers.ModelSerializer):
         return marca
 
     def update(self, instance, validated_data):
-        instance.marca = str(validated_data.get('marca', instance.marca)).upper()
+        instance.marca = unidecode(str(validated_data.get('marca', instance.marca)).upper())
         instance.save()
 
 
@@ -119,7 +120,7 @@ class ProdutoSerializer(serializers.ModelSerializer):
         name = validated_data.pop('nome')
 
         produto = Produto.objects.create(
-            nome = str(name).upper(),
+            nome = unidecode(str(name).upper()),
             marca = fabri,
             user = userdt,
             **validated_data
@@ -136,7 +137,7 @@ class ProdutoSerializer(serializers.ModelSerializer):
                 id = int(marca_data['marca']),
             )
             instance.marca = marca
-        instance.nome = str(validated_data.get('nome', instance.nome)).upper()
+        instance.nome = unidecode(str(validated_data.get('nome', instance.nome)).upper())
         instance.save()
         return instance
 
@@ -150,3 +151,26 @@ class ProdutoListaSerializer(serializers.ModelSerializer):
     class Meta:
         model= Produto
         fields = ['id', 'nome', 'marca', 'user', 'criado', 'update']
+
+
+class CNPJSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CNPJ
+        fields = ['razao_social', 'nome_fantasia', 'cnpj']
+
+    def create(self, validated_data):
+        razao = validated_data.pop('razao_social', None)
+        fantasia = validated_data.pop('nome_fantasia', None)
+        pj = validated_data.pop('cnpj', None)
+        user = self.context['request'].user
+
+        empresa = CNPJ.objects.create(
+            razao_social=unidecode(str(razao).upper()),
+            nome_fantasia=unidecode(str(fantasia).upper()),
+            cnpj=unidecode(pj),
+            user= user,
+            **validated_data
+        )
+        empresa.save()
+        return empresa

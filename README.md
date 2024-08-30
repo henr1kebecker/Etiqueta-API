@@ -4,7 +4,7 @@
 
     For example:
    ```bash
-   ./env\Scripts\activate
+   .\env\Scripts\activate
    ```
 
 2. Install dependencies though requirements file.

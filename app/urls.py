@@ -15,4 +15,5 @@ urlpatterns = [
     path('produto/', v.ListaProdutos.as_view(), name='ListaProdutos'),
     path('produto/novo/', v.CriarProduto.as_view(), name='CriarProduto'),
     path('produto/editar/<int:pk>/', v.UpdateProdutos.as_view(), name='EditarProdutos'),
+    path('instituicao/criar/', v.PessoaJuridica.as_view(), name='Instituicao'),
 ]

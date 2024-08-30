@@ -16,6 +16,8 @@ class Usuario(AbstractUser):
     nome = models.CharField(_('Nome'), max_length=20)
     setor = models.CharField(_('Setor'), max_length=15, choices=CARGO, default='USER')
 
+
+
     USERNAME_FIELD = 'codigo'
     REQUIRED_FIELDS = ['nome']
 
@@ -54,3 +56,12 @@ class Produto(models.Model):
     criado = models.DateTimeField(auto_now_add=True)
     update = models.DateTimeField(auto_now=True)
     user = models.ForeignKey(Usuario, on_delete=models.DO_NOTHING, related_name='produtos')
+
+
+class CNPJ(models.Model):
+    razao_social = models.CharField(max_length=50, blank=False, null=False, verbose_name='Razão Social')
+    nome_fantasia = models.CharField(max_length=50, blank=False, null=False, verbose_name='Nome Fantasia')
+    cnpj = models.CharField(max_length=14, blank=False, null=False, verbose_name='CNPJ')
+    criado = models.DateTimeField(auto_now_add=True)
+    update = models.DateTimeField(auto_now=True)
+    user = models.ForeignKey(Usuario, on_delete=models.DO_NOTHING, related_name='cnpjs')
