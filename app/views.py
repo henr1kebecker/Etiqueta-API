@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from rest_framework import status
 from .serializers import (LoginSerializer, MarcaSerializer, 
                           ProdutoSerializer, MarcaListaSerializer, ProdutoListaSerializer, 
-                          CNPJSerializer
+                          CNPJSerializer, UserUpdatePJ
                           )
 from rest_framework.views import APIView
 from django.views.decorators.csrf import get_token
@@ -16,7 +16,6 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-import re
 from unidecode import unidecode
 
 
@@ -58,6 +57,14 @@ class RegistrarUser(generics.CreateAPIView):
     permission_classes = [AllowAny]
     
 
+class EditarPj(generics.UpdateAPIView):
+    queryset = Usuario.objects.all()
+    serializer_class = UserUpdatePJ
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = [IsAuthenticated]
+
+
+
 class LoginToken(APIView):
     serializer_class = LoginSerializer
     permission_classes = [AllowAny]
@@ -65,15 +72,18 @@ class LoginToken(APIView):
     def post(self, request, *args, **kwargs):
         codigo = request.data.get('codigo')
         pwd = request.data.get('password')
+        pj = request.data.get('cnpj')
         
         user = authenticate(codigo=codigo, password=pwd)
-        data = { 'nome': user.nome, 'setor': user.setor }
-
         if user is not None:
+            print(user.empresa.cnpj)
+
+        if user is not None and pj == user.empresa.cnpj:
+            data = { 'nome': user.nome, 'setor': user.setor, 'empresa': {'cnpj':user.empresa.cnpj, 'nome' : user.empresa.nome_fantasia} }
             token, criar = Token.objects.get_or_create(user=user)
             return Response({'acesso':True, 'token': token.key, 'usuario': data})
         else:
-            return Response({'acesso':False, 'erro': 'Codigo e/ou senha inválidos' })
+            return Response({'acesso':False, 'erro': 'Codigo e/ou senha inválidos' }, status=status.HTTP_401_UNAUTHORIZED)
 
 
 

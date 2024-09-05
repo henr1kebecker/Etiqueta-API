@@ -8,6 +8,7 @@ from unidecode import unidecode
 
 
 class UserSerializer(serializers.ModelSerializer):
+    
     senha = serializers.CharField(
         label="Senha",
         write_only=True, 
@@ -23,14 +24,17 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['codigo','nome', 'setor', 'senha', 'senha2']
+        fields = ['empresa','codigo','nome', 'setor', 'senha', 'senha2']
         extra_kwargs = {'password': {'write_only': True}}
 
     def save(self):
+        pj = self.validated_data.pop('empresa', [])
+        
         user = Usuario(
             codigo=self.validated_data['codigo'],
             nome=self.validated_data['nome'],
             setor=self.validated_data['setor'],
+            empresa=None
         )
         senha = self.validated_data['senha']
         senha2 = self.validated_data['senha2']
@@ -38,8 +42,32 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'senha': 'As senhas precisão ser iguais!'})
         user.set_password(senha)
         user.save()
+        print(user)
 
         return user
+    
+
+
+class UserUpdatePJ(serializers.ModelSerializer):
+
+    class Meta:
+        model = Usuario
+        fields = ['empresa',]
+
+    def update(self, instance, validade_data):
+        pj = validade_data.pop('empresa', None)
+        
+
+        print(pj.id)
+
+        if pj:
+            empresa = CNPJ.objects.get(
+                cnpj = pj.cnpj,
+            )
+        instance.empresa = empresa
+        instance.save()    
+
+        return instance
 
 class LoginSerializer(serializers.Serializer):
     codigo = serializers.CharField(required=True)
@@ -136,7 +164,7 @@ class ProdutoSerializer(serializers.ModelSerializer):
             marca = Marca.objects.get(
                 id = int(marca_data['marca']),
             )
-            instance.marca = marca
+        instance.marca = marca
         instance.nome = unidecode(str(validated_data.get('nome', instance.nome)).upper())
         instance.save()
         return instance
@@ -163,13 +191,12 @@ class CNPJSerializer(serializers.ModelSerializer):
         razao = validated_data.pop('razao_social', None)
         fantasia = validated_data.pop('nome_fantasia', None)
         pj = validated_data.pop('cnpj', None)
-        user = self.context['request'].user
+    
 
         empresa = CNPJ.objects.create(
             razao_social=unidecode(str(razao).upper()),
             nome_fantasia=unidecode(str(fantasia).upper()),
             cnpj=unidecode(pj),
-            user= user,
             **validated_data
         )
         empresa.save()

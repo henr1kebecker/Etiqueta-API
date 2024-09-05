@@ -7,6 +7,7 @@ urlpatterns = [
     path('logout/', v.Logout.as_view(), name='logout'),
     path('check-token/', v.checkToken, name='CheckToken'),
     path('criar/', v.RegistrarUser.as_view(), name='criarConta'),
+    path('pj/editar/<int:pk>/', v.EditarPj.as_view(), name='EditarConta'),
     path('get-token/', v.getToken, name='getToken'),
     path('justificar-ponto/', v.JustificarPonto.as_view(), name='VerificarToken'),
     path('marca/', v.ListaMarca.as_view(), name='ListarMarca'),
