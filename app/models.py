@@ -1,6 +1,9 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, PermissionsMixin
 from django.utils.translation import gettext_lazy as _
+from .managers import UsuarioManager
+
+
 
 # Create your models here.
 
@@ -14,7 +17,7 @@ class CNPJ(models.Model):
     def __str__(self) -> str:
         return self.nome_fantasia
 
-class Usuario(AbstractUser):
+class Usuario(AbstractUser, PermissionsMixin):
     CARGO = (
         ('ADM', 'Administrativo'),
         ('LD', 'Lider'),
@@ -22,7 +25,7 @@ class Usuario(AbstractUser):
     )
 
     username = models.CharField(max_length=10, unique=False, blank=True, null=True, default="")
-    codigo = models.CharField(_("Codigo"), unique=True, max_length=4)
+    codigo = models.CharField(_("Codigo"), unique=True, max_length=6)
     nome = models.CharField(_('Nome'), max_length=20)
     setor = models.CharField(_('Setor'), max_length=15, choices=CARGO, default='USER')
     empresa = models.ForeignKey(CNPJ, null=True, blank=True, on_delete=models.DO_NOTHING, related_name='users')
@@ -31,7 +34,7 @@ class Usuario(AbstractUser):
     USERNAME_FIELD = 'codigo'
     REQUIRED_FIELDS = ['nome']
 
-    # objects = UsuarioManager()
+    objects = UsuarioManager()
 
     def __str__(self)-> str:
         return self.nome
@@ -47,7 +50,7 @@ class Ponto(models.Model):
     user = models.ForeignKey(Usuario, on_delete=models.DO_NOTHING, related_name='pontos')
     data = models.DateField()
     motivo = models.CharField(max_length=150)
-
+    empresa = models.ForeignKey(CNPJ, on_delete=models.DO_NOTHING, related_name='pontos')
     
 
 class Marca(models.Model):
@@ -55,6 +58,7 @@ class Marca(models.Model):
     criado = models.DateTimeField(auto_now_add=True)
     update = models.DateTimeField(auto_now=True)
     user = models.ForeignKey(Usuario, on_delete=models.DO_NOTHING, related_name='marcas')
+    empresa = models.ForeignKey(CNPJ, on_delete=models.DO_NOTHING, related_name='marcas')
 
     def __str__(self)-> str:
         return self.marca
@@ -66,5 +70,6 @@ class Produto(models.Model):
     criado = models.DateTimeField(auto_now_add=True)
     update = models.DateTimeField(auto_now=True)
     user = models.ForeignKey(Usuario, on_delete=models.DO_NOTHING, related_name='produtos')
+    empresa = models.ForeignKey(CNPJ, on_delete=models.DO_NOTHING, related_name='produtos')
 
 

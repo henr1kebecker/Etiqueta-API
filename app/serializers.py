@@ -58,8 +58,6 @@ class UserUpdatePJ(serializers.ModelSerializer):
         pj = validade_data.pop('empresa', None)
         
 
-        print(pj.id)
-
         if pj:
             empresa = CNPJ.objects.get(
                 cnpj = pj.cnpj,
@@ -82,10 +80,11 @@ class PontoSerializer(serializers.Serializer):
         fields = ['data', 'motivo']
 
     def create(self, **kwargs):
-        
+        userdt = self.context['request'].user
         ponto = Ponto(
             data = self.validated_data['data'],
-            motivo = self.validated_data['motivo']
+            motivo = self.validated_data['motivo'],
+            empresa = userdt.empresa
         )
         self.validated_data['user'] = self.context['request'].user
 
@@ -107,7 +106,8 @@ class MarcaSerializer(serializers.ModelSerializer):
         userdt = self.context['request'].user
         marca = Marca(
             marca = unidecode(str(validated_data['marca']).upper()),
-            user = userdt
+            user = userdt,
+            empresa = userdt.empresa
         )
         
         marca.save()
@@ -151,6 +151,7 @@ class ProdutoSerializer(serializers.ModelSerializer):
             nome = unidecode(str(name).upper()),
             marca = fabri,
             user = userdt,
+            empresa = userdt.empresa,
             **validated_data
         )
         produto.save()

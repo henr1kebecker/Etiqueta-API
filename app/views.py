@@ -75,11 +75,13 @@ class LoginToken(APIView):
         pj = request.data.get('cnpj')
         
         user = authenticate(codigo=codigo, password=pwd)
-        if user is not None:
-            print(user.empresa.cnpj)
 
-        if user is not None and pj == user.empresa.cnpj:
-            data = { 'nome': user.nome, 'setor': user.setor, 'empresa': {'cnpj':user.empresa.cnpj, 'nome' : user.empresa.nome_fantasia} }
+        if user is not None and user.is_staff:
+            data = { 'nome': user.nome, 'setor': user.setor, 'root': user.is_staff}
+            token, criar = Token.objects.get_or_create(user=user)
+            return Response({'acesso':True, 'token': token.key, 'usuario': data})
+        elif user is not None and user.empresa.cnpj == pj:
+            data = { 'nome': user.nome, 'setor': user.setor, 'root': user.is_staff}
             token, criar = Token.objects.get_or_create(user=user)
             return Response({'acesso':True, 'token': token.key, 'usuario': data})
         else:
@@ -116,7 +118,10 @@ class ListaMarca(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Marca.objects.all()
+        user = self.request.user
+        print(user.empresa.cnpj)
+
+        queryset = Marca.objects.filter(empresa=user.empresa)
         buscar = self.request.query_params.get('nome', None)
         buscar_id = self.request.query_params.get('id', None)
 
@@ -153,7 +158,8 @@ class ListaProdutos(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Produto.objects.all()
+        user = self.request.user
+        queryset = Produto.objects.filter(empresa=user.empresa)
         buscar = self.request.query_params.get('nome', None)
         id = self.request.query_params.get('id', None)
 
